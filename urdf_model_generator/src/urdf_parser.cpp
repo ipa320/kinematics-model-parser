@@ -82,7 +82,7 @@ public:
 
         const PoseXtext& origin = static_cast<const PoseXtext&>(this->parent_to_joint_origin_transform);
         if(origin.isSet()) {
-            xtext_str += "\t\torigin " + origin.dump_xtext() + " \n";
+            xtext_str += "\t\torigin " + origin.dump_xtext() + "\n";
         }
 
 	    xtext_str += "\t\tparent Parent { link " + this->parent_link_name + " }\n \

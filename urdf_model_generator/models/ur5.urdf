@@ -22,7 +22,7 @@ RobotType { name ur5
 		Joint {
  		name shoulder_lift_joint
  		type revolute
-		origin Pose { rpy "0.000000 0.707107 0.000000 0.707107" xyz "0.000000 0.135850 0.000000" } 
+		origin Pose { rpy "0.000000 1.570796 -0.000000" xyz "0.000000 0.135850 0.000000" }
 		parent Parent { link shoulder_link }
  		child Child { link upper_arm_link }
 		axis Axis { xyz "0.000000 1.000000 0.000000" }
@@ -58,14 +58,14 @@ RobotType { name ur5
 		Joint {
  		name ee_fixed_joint
  		type fixed
-		origin Pose { rpy "0.000000 0.000000 0.707107 0.707107" xyz "0.000000 0.082300 0.000000" } 
+		origin Pose { rpy "0.000000 -0.000000 1.570796" xyz "0.000000 0.082300 0.000000" }
 		parent Parent { link wrist_3_link }
  		child Child { link ee_link }
 },
 		Joint {
  		name wrist_3_link_tool0_fixed_joint
  		type fixed
-		origin Pose { rpy "-0.707107 0.000000 0.000000 0.707107" xyz "0.000000 0.082300 0.000000" } 
+		origin Pose { rpy "-1.570796 0.000000 0.000000" xyz "0.000000 0.082300 0.000000" }
 		parent Parent { link wrist_3_link }
  		child Child { link tool0 }
 } }
