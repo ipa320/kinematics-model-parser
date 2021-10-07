@@ -19,6 +19,10 @@
 
 #include "urdf/model.h"
 
+
+static const std::string type_str[] = {"unknown", "revolute", "continuous",
+    "prismatic", "floating", "planar", "fixed"};
+
 class URDFParser {
 public:
     URDFParser(std::string file) {
@@ -72,6 +76,7 @@ private:
     urdf::Model robot;
 
 
+
     // the idea is the link and joint classes are auto-generated from the model
     // so the link and object classes used below (which currently are defined in urdfdom repo),
     // are from the same model
@@ -121,7 +126,7 @@ private:
         }
         joint_str += "\tJoint {\n \
 	\tname " + joint->name + "\n \
-	\ttype " + "revolute" + "\n \
+	\ttype " + type_str[joint->type] + "\n \
 	\tparent Parent { link " + joint->parent_link_name + "}\n \
 	\tchild Child { link " + joint->child_link_name + "}\n \
 	},\n";
