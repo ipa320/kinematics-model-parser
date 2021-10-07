@@ -152,7 +152,7 @@ private:
             link_str.pop_back();
             xtext_str += link_str + " }\n";
         }
-        xtext_str += "}";
+        xtext_str += "}\n";
         return xtext_str;
     }
 
