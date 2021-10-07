@@ -47,7 +47,9 @@ public:
         if(!isSet()) {
             return "";
         }
-        return "rpy \"" + std::to_string(this->x) + " " + std::to_string(this->y) + " " + std::to_string(this->z) + " " + std::to_string(this->w) + "\"";
+        double roll, pitch, yaw;
+        this->getRPY(roll, pitch, yaw);
+        return "rpy \"" + std::to_string(roll) + " " + std::to_string(pitch) + " " + std::to_string(yaw) + "\"";
     }
 
     bool isSet() const {
