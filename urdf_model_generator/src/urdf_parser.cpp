@@ -14,158 +14,189 @@
 * limitations under the License.
 ***************************************************************************************/
 
-// Note: The original code is from 
-// https://github.com/ros/urdf/blob/e84c0ce88a37cf78ac456c7fae4b4e9bd7430069/urdf/test/test_robot_model_parser.cpp
 
+#include <fstream>
 #include "urdf/model.h"
 
 
 static const std::string type_str[] = {"unknown", "revolute", "continuous",
     "prismatic", "floating", "planar", "fixed"};
 
-class URDFParser {
+URDF_TYPEDEF_CLASS_POINTER(LinkXtext);
+
+namespace urdf {    // urdf namespace
+
+class Vector3Xtext : public Vector3 {
 public:
-    URDFParser(std::string file) {
-        this->robot.initFile(file);
+    std::string dump_xtext() const {
+        if (!isSet()) {
+            return "";
+        }
+        return "xyz \"" + std::to_string(this->x) + " " + std::to_string(this->y) + " " + std::to_string(this->z) + "\"";
     }
 
-    bool checkModel() {
-        // get root link
-        urdf::LinkConstSharedPtr root_link = robot.getRoot();
-        if (!root_link) {
-            std::cerr << "no root link " << robot.getName().c_str() << std::endl;
-            return false;
+    bool isSet() const {
+        return !(this->x == this->y == this->z == 0.0);
+    }
+};
+
+
+class RotationXtext : public Rotation {
+public:
+    std::string dump_xtext() const {
+        if(!isSet()) {
+            return "";
+        }
+        return "rpy \"" + std::to_string(this->x) + " " + std::to_string(this->y) + " " + std::to_string(this->z) + " " + std::to_string(this->w) + "\"";
+    }
+
+    bool isSet() const {
+        return !(this->x == this->y == this->z == 0.0 && this->w == 1.0);
+    }
+};
+
+
+class PoseXtext : public Pose {
+public:
+    std::string dump_xtext() const {
+        const Vector3Xtext& pos = static_cast<const Vector3Xtext&>(this->position);
+        const RotationXtext& rot = static_cast<const RotationXtext&>(this->rotation);
+        return "Pose { " + rot.dump_xtext() + " " + pos.dump_xtext() + " }";
+    }
+
+    bool isSet() const {
+        const Vector3Xtext& pos = static_cast<const Vector3Xtext&>(this->position);
+        const RotationXtext& rot = static_cast<const RotationXtext&>(this->rotation);
+        return pos.isSet() && rot.isSet();
+    }
+};
+
+class JointXtext : public Joint {
+public:
+    std::string dump_xtext() const {
+        std::string xtext_str = "\t\tJoint {\n \
+	\tname " + this->name + "\n \
+	\ttype " + type_str[this->type] + "\n";
+
+        const PoseXtext& origin = static_cast<const PoseXtext&>(this->parent_to_joint_origin_transform);
+        if(origin.isSet()) {
+            xtext_str += "\t\torigin " + origin.dump_xtext() + " \n";
         }
 
-        model_str = "RobotType { name " + robot.getName() + "\n";
+	    xtext_str += "\t\tparent Parent { link " + this->parent_link_name + " }\n \
+	\tchild Child { link " + this->child_link_name + " }\n";
 
-        std::cout << "link name: " << root_link->name << std::endl;
-        print_link(root_link);
+        const Vector3Xtext& axis_ = static_cast<const Vector3Xtext&>(this->axis);
+        if(axis_.isSet()) {
+            xtext_str += "\t\taxis Axis { " + axis_.dump_xtext() + " }\n";
+        }
 
-        // go through entire tree
-        return traverse_tree(root_link);
+        xtext_str += "},\n";
+        return xtext_str;
+    }
+};
+typedef std::shared_ptr<const JointXtext> JointXtextConstSharedPtr;
+
+
+class LinkXtext : public Link {
+public:
+    std::string dump_xtext() const {
+        return "\t\t Link { name " + this->name + " },\n";
+    }
+};
+typedef std::shared_ptr<const LinkXtext> LinkXtextConstSharedPtr;
+
+
+class ModelXtext : public Model {
+public:
+    ModelXtext(std::string file) : Model() {
+        this->initFile(file);
     }
 
-    std::string generateModelString() {
+    bool save(std::string filename) {
+        std::ofstream model_file;
+        model_file.open(filename);
+        model_file << dump_xtext();
+        model_file.close();
+        return true;
+    }
+
+    std::string dump_xtext() {
+        LinkXtextConstSharedPtr root_link = getRootLink();
+        if (!root_link) {
+            std::cerr << "no root link " << this->getName().c_str() << std::endl;
+            return "";
+        }
+
+        xtext_str = "RobotType { name " + this->getName() + "\n";
+        link_str = "\tlink {\n" + root_link->dump_xtext();
+        traverse_tree(root_link);
+        return compile_xtext();
+    }
+
+    LinkXtextConstSharedPtr getRootLink() const {
+        return std::static_pointer_cast<const urdf::LinkXtext>(this->getRoot());
+    }
+
+private:
+    std::string xtext_str, link_str, joint_str;
+
+    std::string compile_xtext() {
         if(!joint_str.empty()) {
             joint_str.pop_back();
             joint_str.pop_back();
-            model_str += joint_str + "}\n";
+            xtext_str += "\tjoint {\n" + joint_str + " }\n";
         }
         if(!link_str.empty()) {
             link_str.pop_back();
             link_str.pop_back();
-            model_str += link_str + "}\n";
+            xtext_str += link_str + " }\n";
         }
-        model_str += "}";
-        return model_str;
+        xtext_str += "}";
+        return xtext_str;
     }
 
-    std::string getModelString() {
-        return model_str;
-    }
-
-private:
-    size_t num_joints;
-    size_t num_links;
-
-    std::string model_str;
-    std::string link_str;
-    std::string joint_str;
-
-    urdf::Model robot;
-
-    bool isVector3Set(const urdf::Vector3 &axis) {
-        return !(axis.x == axis.y == axis.z == 0.0);
-    }
-
-    bool isRotationSet(const urdf::Rotation &rot) {
-        return !(rot.x == rot.y == rot.z == 0.0 && rot.w == 1.0);
-    }
-
-    bool isPoseSet(const urdf::Pose &pose) {
-        return isVector3Set(pose.position) && isRotationSet(pose.rotation);
-    }
-
-    // the idea is the link and joint classes are auto-generated from the model
-    // so the link and object classes used below (which currently are defined in urdfdom repo),
-    // are from the same model
-    // so once the URDF has been parsed, the tree can be traversed as below to generate the model string already
-    // for each model element, there has to be a function to convert it into DSL string
-    bool traverse_tree(urdf::LinkConstSharedPtr link, int level = 0) {
-        std::cout << "Traversing tree at level " << level << " link size " << link->child_links.size() << std::endl;
+    // Note: The original code is from
+    // https://github.com/ros/urdf/blob/e84c0ce88a37cf78ac456c7fae4b4e9bd7430069/urdf/test/test_robot_model_parser.cpp
+    bool traverse_tree(LinkXtextConstSharedPtr link, int level = 0) {
         level += 2;
         bool retval = true;
-        for (const urdf::LinkSharedPtr & child : link->child_links) {
-            std::cout << "link name: " << child->name << std::endl;
-            print_link(child);
-            ++num_links;
-            if (child && child->parent_joint) {
-                std::cout << "joint name: " << child->parent_joint->name << std::endl;
-                print_joint(child->parent_joint);
-                ++num_joints;
+        for (const LinkConstSharedPtr & child : link->child_links) {
+            LinkXtextConstSharedPtr child_ = std::static_pointer_cast<const LinkXtext>(child);
+            link_str += child_->dump_xtext();
+
+            if (child_ && child_->parent_joint) {
+                JointXtextConstSharedPtr joint = std::static_pointer_cast<const JointXtext>(child->parent_joint);
+                joint_str += joint->dump_xtext();
+
                 // check rpy
                 double roll, pitch, yaw;
-                child->parent_joint->parent_to_joint_origin_transform.rotation.getRPY(roll, pitch, yaw);
+                child_->parent_joint->parent_to_joint_origin_transform.rotation.getRPY(roll, pitch, yaw);
 
                 if (std::isnan(roll) || std::isnan(pitch) || std::isnan(yaw)) {
                     std::cerr << "getRPY() returned nan!" <<std::endl;;
                     return false;
                 }
                 // recurse down the tree
-                retval &= this->traverse_tree(child, level);
+                retval &= this->traverse_tree(child_, level);
             } else {
                 std::cout << "root link: " << link->name.c_str() << " has a null child!" << std::endl;
                 return false;
             }
         }
+
         // no more children
         return retval;
     }
-
-    void print_link(urdf::LinkConstSharedPtr link) {
-        if(link_str.empty()) {
-            link_str = "\tlink {\n";
-        }
-        link_str += "\t Link { name " + link->name + "},\n";
-    }
-
-    void print_joint(urdf::JointConstSharedPtr joint) {
-        if(joint_str.empty()) {
-            joint_str = "\tjoint {\n";
-        }
-
-        joint_str += "\tJoint {\n \
-	\tname " + joint->name + "\n \
-	\ttype " + type_str[joint->type] + "\n";
-
-    if(isPoseSet(joint->parent_to_joint_origin_transform)) {
-        joint_str += "\t\torigin Pose { rpy \"" + std::to_string(joint->parent_to_joint_origin_transform.rotation.x) + " " + \
-                                                  std::to_string(joint->parent_to_joint_origin_transform.rotation.y) + " " + \
-                                                  std::to_string(joint->parent_to_joint_origin_transform.rotation.z) + " " + \
-                                                  std::to_string(joint->parent_to_joint_origin_transform.rotation.w) + "\" " + \
-                                       "xyz \"" + std::to_string(joint->parent_to_joint_origin_transform.position.x) + " " + \
-                                                  std::to_string(joint->parent_to_joint_origin_transform.position.y) + " " + \
-                                                  std::to_string(joint->parent_to_joint_origin_transform.position.z) + "\" }\n";
-    }
-
-	joint_str += "\t\tparent Parent { link " + joint->parent_link_name + "}\n \
-	\tchild Child { link " + joint->child_link_name + "}\n";
-
-        if(isVector3Set(joint->axis)) {
-            // std::cout << "axis: " << joint->axis.x << " " << joint->axis.y << " " << joint->axis.z << std::endl;
-            joint_str += "\t\taxis Axis { xyz \"" + std::to_string(joint->axis.x) + " " + std::to_string(joint->axis.y) + " " + std::to_string(joint->axis.z) + "\" }\n";
-        }
-        joint_str += "},\n";
-    }
 };
+
+}   // urdf namespace
+
 
 int main(int argc, char** argv)
 {
-    std::cout << "Hello World " << std::endl;
-    URDFParser parser(argv[1]);
-    bool isValid = parser.checkModel();
-    std::cout << "Is tree valid? " << isValid << std::endl;
-    std::cout << parser.generateModelString() << std::endl;
+    urdf::ModelXtext model(argv[1]);
+    // std::cout << model.dump_xtext() << std::endl;
+    model.save(argv[2]);
     return 0;
 }
