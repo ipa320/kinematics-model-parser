@@ -75,7 +75,17 @@ private:
 
     urdf::Model robot;
 
+    bool isVector3Set(const urdf::Vector3 &axis) {
+        return !(axis.x == axis.y == axis.z == 0.0);
+    }
 
+    bool isRotationSet(const urdf::Rotation &rot) {
+        return !(rot.x == rot.y == rot.z == 0.0 && rot.w == 1.0);
+    }
+
+    bool isPoseSet(const urdf::Pose &pose) {
+        return isVector3Set(pose.position) && isRotationSet(pose.rotation);
+    }
 
     // the idea is the link and joint classes are auto-generated from the model
     // so the link and object classes used below (which currently are defined in urdfdom repo),
@@ -124,12 +134,29 @@ private:
         if(joint_str.empty()) {
             joint_str = "\tjoint {\n";
         }
+
         joint_str += "\tJoint {\n \
 	\tname " + joint->name + "\n \
-	\ttype " + type_str[joint->type] + "\n \
-	\tparent Parent { link " + joint->parent_link_name + "}\n \
-	\tchild Child { link " + joint->child_link_name + "}\n \
-	},\n";
+	\ttype " + type_str[joint->type] + "\n";
+
+    if(isPoseSet(joint->parent_to_joint_origin_transform)) {
+        joint_str += "\t\torigin Pose { rpy \"" + std::to_string(joint->parent_to_joint_origin_transform.rotation.x) + " " + \
+                                                  std::to_string(joint->parent_to_joint_origin_transform.rotation.y) + " " + \
+                                                  std::to_string(joint->parent_to_joint_origin_transform.rotation.z) + " " + \
+                                                  std::to_string(joint->parent_to_joint_origin_transform.rotation.w) + "\" " + \
+                                       "xyz \"" + std::to_string(joint->parent_to_joint_origin_transform.position.x) + " " + \
+                                                  std::to_string(joint->parent_to_joint_origin_transform.position.y) + " " + \
+                                                  std::to_string(joint->parent_to_joint_origin_transform.position.z) + "\" }\n";
+    }
+
+	joint_str += "\t\tparent Parent { link " + joint->parent_link_name + "}\n \
+	\tchild Child { link " + joint->child_link_name + "}\n";
+
+        if(isVector3Set(joint->axis)) {
+            // std::cout << "axis: " << joint->axis.x << " " << joint->axis.y << " " << joint->axis.z << std::endl;
+            joint_str += "\t\taxis Axis { xyz \"" + std::to_string(joint->axis.x) + " " + std::to_string(joint->axis.y) + " " + std::to_string(joint->axis.z) + "\" }\n";
+        }
+        joint_str += "},\n";
     }
 };
 
