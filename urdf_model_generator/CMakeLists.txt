@@ -11,8 +11,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(urdf_parser src/urdf_parser.cpp)
+add_executable(urdf_model_generator src/urdf_model_generator.cpp)
 
-target_link_libraries(urdf_parser
+target_link_libraries(urdf_model_generator
   ${catkin_LIBRARIES}
 )

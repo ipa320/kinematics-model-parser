@@ -22,13 +22,11 @@
 static const std::string type_str[] = {"unknown", "revolute", "continuous",
     "prismatic", "floating", "planar", "fixed"};
 
-URDF_TYPEDEF_CLASS_POINTER(LinkXtext);
-
 namespace urdf {    // urdf namespace
 
 class Vector3Xtext : public Vector3 {
 public:
-    std::string dump_xtext() const {
+    std::string dumpXtext() const {
         if (!isSet()) {
             return "";
         }
@@ -43,7 +41,7 @@ public:
 
 class RotationXtext : public Rotation {
 public:
-    std::string dump_xtext() const {
+    std::string dumpXtext() const {
         if(!isSet()) {
             return "";
         }
@@ -60,10 +58,10 @@ public:
 
 class PoseXtext : public Pose {
 public:
-    std::string dump_xtext() const {
+    std::string dumpXtext() const {
         const Vector3Xtext& pos = static_cast<const Vector3Xtext&>(this->position);
         const RotationXtext& rot = static_cast<const RotationXtext&>(this->rotation);
-        return "Pose { " + rot.dump_xtext() + " " + pos.dump_xtext() + " }";
+        return "Pose { " + rot.dumpXtext() + " " + pos.dumpXtext() + " }";
     }
 
     bool isSet() const {
@@ -73,16 +71,17 @@ public:
     }
 };
 
+
 class JointXtext : public Joint {
 public:
-    std::string dump_xtext() const {
+    std::string dumpXtext() const {
         std::string xtext_str = "\t\tJoint {\n \
 	\tname " + this->name + "\n \
 	\ttype " + type_str[this->type] + "\n";
 
         const PoseXtext& origin = static_cast<const PoseXtext&>(this->parent_to_joint_origin_transform);
         if(origin.isSet()) {
-            xtext_str += "\t\torigin " + origin.dump_xtext() + "\n";
+            xtext_str += "\t\torigin " + origin.dumpXtext() + "\n";
         }
 
 	    xtext_str += "\t\tparent Parent { link " + this->parent_link_name + " }\n \
@@ -90,7 +89,7 @@ public:
 
         const Vector3Xtext& axis_ = static_cast<const Vector3Xtext&>(this->axis);
         if(axis_.isSet()) {
-            xtext_str += "\t\taxis Axis { " + axis_.dump_xtext() + " }\n";
+            xtext_str += "\t\taxis Axis { " + axis_.dumpXtext() + " }\n";
         }
 
         xtext_str += "},\n";
@@ -102,7 +101,7 @@ typedef std::shared_ptr<const JointXtext> JointXtextConstSharedPtr;
 
 class LinkXtext : public Link {
 public:
-    std::string dump_xtext() const {
+    std::string dumpXtext() const {
         return "\t\t Link { name " + this->name + " },\n";
     }
 };
@@ -118,12 +117,12 @@ public:
     bool save(std::string filename) {
         std::ofstream model_file;
         model_file.open(filename);
-        model_file << dump_xtext();
+        model_file << dumpXtext();
         model_file.close();
         return true;
     }
 
-    std::string dump_xtext() {
+    std::string dumpXtext() {
         LinkXtextConstSharedPtr root_link = getRootLink();
         if (!root_link) {
             std::cerr << "no root link " << this->getName().c_str() << std::endl;
@@ -131,9 +130,9 @@ public:
         }
 
         xtext_str = "RobotType { name " + this->getName() + "\n";
-        link_str = "\tlink {\n" + root_link->dump_xtext();
+        link_str = "\tlink {\n" + root_link->dumpXtext();
         traverse_tree(root_link);
-        return compile_xtext();
+        return compileXtext();
     }
 
     LinkXtextConstSharedPtr getRootLink() const {
@@ -143,7 +142,7 @@ public:
 private:
     std::string xtext_str, link_str, joint_str;
 
-    std::string compile_xtext() {
+    std::string compileXtext() {
         if(!joint_str.empty()) {
             joint_str.pop_back();
             joint_str.pop_back();
@@ -165,11 +164,11 @@ private:
         bool retval = true;
         for (const LinkConstSharedPtr & child : link->child_links) {
             LinkXtextConstSharedPtr child_ = std::static_pointer_cast<const LinkXtext>(child);
-            link_str += child_->dump_xtext();
+            link_str += child_->dumpXtext();
 
             if (child_ && child_->parent_joint) {
                 JointXtextConstSharedPtr joint = std::static_pointer_cast<const JointXtext>(child->parent_joint);
-                joint_str += joint->dump_xtext();
+                joint_str += joint->dumpXtext();
 
                 // check rpy
                 double roll, pitch, yaw;
@@ -198,7 +197,7 @@ private:
 int main(int argc, char** argv)
 {
     urdf::ModelXtext model(argv[1]);
-    // std::cout << model.dump_xtext() << std::endl;
+    // std::cout << model.dumpXtext() << std::endl;
     model.save(argv[2]);
     return 0;
 }
