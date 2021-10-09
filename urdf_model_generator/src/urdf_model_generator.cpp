@@ -26,7 +26,7 @@ namespace urdf {    // urdf namespace
 
 class Vector3Xtext : public Vector3 {
 public:
-    std::string dumpXtext() const {
+    std::string dumpXtext(std::string keyword = "xyz") const {
         if (!isSet()) {
             return "";
         }
@@ -34,7 +34,7 @@ public:
     }
 
     bool isSet() const {
-        return !(this->x == this->y == this->z == 0.0);
+        return !(this->x == 0.0 && this->y == 0.0 && this->z == 0.0);
     }
 };
 
