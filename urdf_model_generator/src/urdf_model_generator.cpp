@@ -30,7 +30,7 @@ public:
         if (!isSet()) {
             return "";
         }
-        return "xyz \"" + std::to_string(this->x) + " " + std::to_string(this->y) + " " + std::to_string(this->z) + "\"";
+        return keyword + " \"" + std::to_string(this->x) + " " + std::to_string(this->y) + " " + std::to_string(this->z) + "\"";
     }
 
     bool isSet() const {
