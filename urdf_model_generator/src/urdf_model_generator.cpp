@@ -76,23 +76,23 @@ class JointXtext : public Joint {
 public:
     std::string dumpXtext() const {
         std::string xtext_str = "\t\tJoint {\n \
-	\tname " + this->name + "\n \
-	\ttype " + type_str[this->type] + "\n";
+\t\t\tname " + this->name + "\n \
+\t\t\ttype " + type_str[this->type];
 
         const PoseXtext& origin = static_cast<const PoseXtext&>(this->parent_to_joint_origin_transform);
         if(origin.isSet()) {
-            xtext_str += "\t\torigin " + origin.dumpXtext() + "\n";
+            xtext_str += "\n\t\t\torigin " + origin.dumpXtext();
         }
 
-	    xtext_str += "\t\tparent Parent { link " + this->parent_link_name + " }\n \
-	\tchild Child { link " + this->child_link_name + " }\n";
+	    xtext_str += "\n\t\t\tparent Parent { link " + this->parent_link_name + " }\n \
+\t\t\tchild Child { link " + this->child_link_name + " }";
 
         const Vector3Xtext& axis_ = static_cast<const Vector3Xtext&>(this->axis);
         if(axis_.isSet()) {
-            xtext_str += "\t\taxis Axis { " + axis_.dumpXtext() + " }\n";
+            xtext_str += "\n\t\t\taxis Axis { " + axis_.dumpXtext() + " }";
         }
 
-        xtext_str += "},\n";
+        xtext_str += " },\n";
         return xtext_str;
     }
 };
@@ -195,7 +195,7 @@ typedef std::shared_ptr<CollisionXtext> CollisionXtextSharedPtr;
 class LinkXtext : public Link {
 public:
     std::string dumpXtext() const {
-        std::string xtext_str = "\t\t Link { name " + this->name;
+        std::string xtext_str = "\t\tLink { name " + this->name;
         VisualXtextSharedPtr visual = std::static_pointer_cast<VisualXtext>(this->visual);
         if(visual) {
             xtext_str += visual->dumpXtext();
@@ -262,6 +262,7 @@ private:
 
     // Note: The original code is from
     // https://github.com/ros/urdf/blob/e84c0ce88a37cf78ac456c7fae4b4e9bd7430069/urdf/test/test_robot_model_parser.cpp
+    // <transmission> is PR2 specific extension, ignoring
     bool traverse_tree(LinkXtextConstSharedPtr link, int level = 0) {
         level += 2;
         bool retval = true;
