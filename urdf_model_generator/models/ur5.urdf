@@ -1,130 +1,120 @@
 RobotType { name ur5
 	joint {
 		Joint {
- 		name world_joint
- 		type fixed
-		parent Parent { link world }
- 		child Child { link base_link }
-},
+ 			name world_joint
+ 			type fixed
+			parent Parent { link world }
+ 			child Child { link base_link } },
 		Joint {
- 		name base_link_base_fixed_joint
- 		type fixed
-		parent Parent { link base_link }
- 		child Child { link base }
-},
+ 			name base_link_base_fixed_joint
+ 			type fixed
+			parent Parent { link base_link }
+ 			child Child { link base } },
 		Joint {
- 		name shoulder_pan_joint
- 		type revolute
-		parent Parent { link base_link }
- 		child Child { link shoulder_link }
-		axis Axis { xyz "0.000000 0.000000 1.000000" }
-},
+ 			name shoulder_pan_joint
+ 			type revolute
+			parent Parent { link base_link }
+ 			child Child { link shoulder_link }
+			axis Axis { xyz "0.000000 0.000000 1.000000" } },
 		Joint {
- 		name shoulder_lift_joint
- 		type revolute
-		origin Pose { rpy "0.000000 1.570796 -0.000000" xyz "0.000000 0.135850 0.000000" }
-		parent Parent { link shoulder_link }
- 		child Child { link upper_arm_link }
-		axis Axis { xyz "0.000000 1.000000 0.000000" }
-},
+ 			name shoulder_lift_joint
+ 			type revolute
+			origin Pose { rpy "0.000000 1.570796 -0.000000" xyz "0.000000 0.135850 0.000000" }
+			parent Parent { link shoulder_link }
+ 			child Child { link upper_arm_link }
+			axis Axis { xyz "0.000000 1.000000 0.000000" } },
 		Joint {
- 		name elbow_joint
- 		type revolute
-		parent Parent { link upper_arm_link }
- 		child Child { link forearm_link }
-		axis Axis { xyz "0.000000 1.000000 0.000000" }
-},
+ 			name elbow_joint
+ 			type revolute
+			parent Parent { link upper_arm_link }
+ 			child Child { link forearm_link }
+			axis Axis { xyz "0.000000 1.000000 0.000000" } },
 		Joint {
- 		name wrist_1_joint
- 		type revolute
-		origin Pose { rpy "0.000000 1.570796 -0.000000" xyz "0.000000 0.000000 0.392250" }
-		parent Parent { link forearm_link }
- 		child Child { link wrist_1_link }
-		axis Axis { xyz "0.000000 1.000000 0.000000" }
-},
+ 			name wrist_1_joint
+ 			type revolute
+			origin Pose { rpy "0.000000 1.570796 -0.000000" xyz "0.000000 0.000000 0.392250" }
+			parent Parent { link forearm_link }
+ 			child Child { link wrist_1_link }
+			axis Axis { xyz "0.000000 1.000000 0.000000" } },
 		Joint {
- 		name wrist_2_joint
- 		type revolute
-		parent Parent { link wrist_1_link }
- 		child Child { link wrist_2_link }
-		axis Axis { xyz "0.000000 0.000000 1.000000" }
-},
+ 			name wrist_2_joint
+ 			type revolute
+			parent Parent { link wrist_1_link }
+ 			child Child { link wrist_2_link }
+			axis Axis { xyz "0.000000 0.000000 1.000000" } },
 		Joint {
- 		name wrist_3_joint
- 		type revolute
-		parent Parent { link wrist_2_link }
- 		child Child { link wrist_3_link }
-		axis Axis { xyz "0.000000 1.000000 0.000000" }
-},
+ 			name wrist_3_joint
+ 			type revolute
+			parent Parent { link wrist_2_link }
+ 			child Child { link wrist_3_link }
+			axis Axis { xyz "0.000000 1.000000 0.000000" } },
 		Joint {
- 		name ee_fixed_joint
- 		type fixed
-		origin Pose { rpy "0.000000 -0.000000 1.570796" xyz "0.000000 0.082300 0.000000" }
-		parent Parent { link wrist_3_link }
- 		child Child { link ee_link }
-},
+ 			name ee_fixed_joint
+ 			type fixed
+			origin Pose { rpy "0.000000 -0.000000 1.570796" xyz "0.000000 0.082300 0.000000" }
+			parent Parent { link wrist_3_link }
+ 			child Child { link ee_link } },
 		Joint {
- 		name wrist_3_link_tool0_fixed_joint
- 		type fixed
-		origin Pose { rpy "-1.570796 0.000000 0.000000" xyz "0.000000 0.082300 0.000000" }
-		parent Parent { link wrist_3_link }
- 		child Child { link tool0 }
-} }
+ 			name wrist_3_link_tool0_fixed_joint
+ 			type fixed
+			origin Pose { rpy "-1.570796 0.000000 0.000000" xyz "0.000000 0.082300 0.000000" }
+			parent Parent { link wrist_3_link }
+ 			child Child { link tool0 } } }
 	link {
-		 Link { name world },
-		 Link { name base_link
+		Link { name world },
+		Link { name base_link
 			visual Visual {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/visual/base.dae" } } }
 			collision Collision {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/collision/base.stl" } } } },
-		 Link { name base },
-		 Link { name shoulder_link
+		Link { name base },
+		Link { name shoulder_link
 			visual Visual {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/visual/shoulder.dae" } } }
 			collision Collision {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/collision/shoulder.stl" } } } },
-		 Link { name upper_arm_link
+		Link { name upper_arm_link
 			visual Visual {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/visual/upperarm.dae" } } }
 			collision Collision {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/collision/upperarm.stl" } } } },
-		 Link { name forearm_link
+		Link { name forearm_link
 			visual Visual {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/visual/forearm.dae" } } }
 			collision Collision {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/collision/forearm.stl" } } } },
-		 Link { name wrist_1_link
+		Link { name wrist_1_link
 			visual Visual {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/visual/wrist1.dae" } } }
 			collision Collision {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/collision/wrist1.stl" } } } },
-		 Link { name wrist_2_link
+		Link { name wrist_2_link
 			visual Visual {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/visual/wrist2.dae" } } }
 			collision Collision {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/collision/wrist2.stl" } } } },
-		 Link { name wrist_3_link
+		Link { name wrist_3_link
 			visual Visual {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/visual/wrist3.dae" } } }
 			collision Collision {
 				geometry Geometry {
 					mesh Mesh { filename "package://ur_description/meshes/ur5/collision/wrist3.stl" } } } },
-		 Link { name ee_link
+		Link { name ee_link
 			collision Collision {
 				geometry Geometry {
 					box Box { xyz "0.010000 0.010000 0.010000" } } } },
-		 Link { name tool0 } }
+		Link { name tool0 } }
 }
