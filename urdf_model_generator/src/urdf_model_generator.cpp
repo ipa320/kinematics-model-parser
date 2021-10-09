@@ -99,10 +99,113 @@ public:
 typedef std::shared_ptr<const JointXtext> JointXtextConstSharedPtr;
 
 
+class GeometryXtext : public Geometry{
+public:
+    std::string dumpXtext() const {
+        return "\t\t\t\tgeometry Geometry {";
+    }
+};
+typedef std::shared_ptr<GeometryXtext> GeometryXtextSharedPtr;
+
+
+class MeshXtext : public Mesh {
+public:
+    std::string dumpXtext() const {
+        return "\n\t\t\t\t\tmesh Mesh { filename \"" + this->filename + "\" }";
+        // TODO: scale
+    }
+};
+typedef std::shared_ptr<MeshXtext> MeshXtextSharedPtr;
+
+
+class BoxXtext : public Box {
+public:
+    std::string dumpXtext() const {
+        std::string xtext_str = "\n\t\t\t\t\tbox Box { ";
+        const Vector3Xtext& dim = static_cast<const Vector3Xtext&>(this->dim);
+        xtext_str += dim.dumpXtext("size") + " }";;
+        return xtext_str;
+    }
+};
+typedef std::shared_ptr<BoxXtext> BoxXtextSharedPtr;
+
+
+class GeometryHandler {
+protected:
+    std::string dumpGeometryXtext(GeometrySharedPtr geom) const {
+        std::string xtext_str = "";
+        GeometryXtextSharedPtr geometry = std::static_pointer_cast<GeometryXtext>(geom);
+        if(geometry) {
+            xtext_str += geometry->dumpXtext();
+            if(geom->type == Geometry::MESH) {
+                MeshXtextSharedPtr mesh = std::static_pointer_cast<MeshXtext>(geom);
+                xtext_str += mesh->dumpXtext();
+            } else if(geom->type == Geometry::BOX) {
+                BoxXtextSharedPtr box = std::static_pointer_cast<BoxXtext>(geom);
+                std::cout << box->dim.x << std::endl;
+                xtext_str += box->dumpXtext();
+            }
+            xtext_str += " }";
+        }
+        return xtext_str;
+    }
+};
+
+
+class VisualXtext : public Visual, GeometryHandler {
+public:
+    std::string dumpXtext() const {
+        std::string xtext_str = "\n\t\t\tvisual Visual {" + this->name + "\n";
+
+        const PoseXtext& origin = static_cast<const PoseXtext&>(this->origin);
+        if(origin.isSet()) {
+            xtext_str += "\n\t\torigin " + origin.dumpXtext();
+        }
+
+        xtext_str += dumpGeometryXtext(this->geometry) + " }";;
+        return xtext_str;
+    }
+
+    bool isSet() {
+        const PoseXtext& origin = static_cast<const PoseXtext&>(this->origin);
+        // this is not enough
+        return origin.isSet();
+    }
+};
+typedef std::shared_ptr<VisualXtext> VisualXtextSharedPtr;
+
+
+class CollisionXtext : public Collision, GeometryHandler {
+public:
+    std::string dumpXtext() const {
+        std::string xtext_str = "\n\t\t\tcollision Collision {" + this->name + "\n";
+
+        const PoseXtext& origin = static_cast<const PoseXtext&>(this->origin);
+        if(origin.isSet()) {
+            xtext_str += "\n\t\torigin " + origin.dumpXtext();
+        }
+
+        xtext_str += dumpGeometryXtext(this->geometry) + " }";;
+        return xtext_str;
+    }
+};
+typedef std::shared_ptr<CollisionXtext> CollisionXtextSharedPtr;
+
+
 class LinkXtext : public Link {
 public:
     std::string dumpXtext() const {
-        return "\t\t Link { name " + this->name + " },\n";
+        std::string xtext_str = "\t\t Link { name " + this->name;
+        VisualXtextSharedPtr visual = std::static_pointer_cast<VisualXtext>(this->visual);
+        if(visual) {
+            xtext_str += visual->dumpXtext();
+        }
+        CollisionXtextSharedPtr collision = std::static_pointer_cast<CollisionXtext>(this->collision);
+        if(collision) {
+            xtext_str += collision->dumpXtext();
+        }
+        xtext_str += " },\n";
+        return xtext_str;
     }
 };
 typedef std::shared_ptr<const LinkXtext> LinkXtextConstSharedPtr;
