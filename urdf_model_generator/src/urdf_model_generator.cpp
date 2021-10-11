@@ -171,7 +171,7 @@ public:
         const PoseXtext& origin = static_cast<const PoseXtext&>(this->origin);
         xtext_str += "\n\t\t\t\torigin " + origin.dumpXtext();
         xtext_str +=  "\n\t\t\t\tmass Mass { value " + std::to_string(this->mass) + " }";
-        xtext_str += "\n\t\t\t\tinertia Inertial { ixx " +  std::to_string(this->ixx) + " " +
+        xtext_str += "\n\t\t\t\tinertia Inertia { ixx " +  std::to_string(this->ixx) + " " +
             "ixy " +  std::to_string(this->ixy) + " " +
             "ixz " +  std::to_string(this->ixz) + " " +
             "iyy " +  std::to_string(this->iyy) + " " +
