@@ -84,8 +84,8 @@ public:
             xtext_str += "\n\t\t\torigin " + origin.dumpXtext();
         }
 
-	    xtext_str += "\n\t\t\tparent Parent { link " + this->parent_link_name + " }\n \
-\t\t\tchild Child { link " + this->child_link_name + " }";
+	    xtext_str += "\n\t\t\tparent " + this->parent_link_name + "\n \
+\t\t\tchild " + this->child_link_name;
 
         const Vector3Xtext& axis_ = static_cast<const Vector3Xtext&>(this->axis);
         if(axis_.isSet()) {
