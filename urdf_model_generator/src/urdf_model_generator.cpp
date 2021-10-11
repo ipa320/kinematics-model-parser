@@ -152,6 +152,45 @@ protected:
 };
 
 
+// class MassXtext : public Mass {
+// public:
+//     std::string dumpXtext(double mass) const {
+//         return "\n\t\t\t\tmass Mass { " + std::to_string(this->mass);
+//     }
+// };
+
+
+class InertialXtext : public Inertial {
+//   Pose origin;
+//   double mass;
+//   double ixx,ixy,ixz,iyy,iyz,izz;
+
+public:
+    std::string dumpXtext() const {
+        std::string xtext_str = "\n\t\t\tinertial Inertial {";
+        const PoseXtext& origin = static_cast<const PoseXtext&>(this->origin);
+        xtext_str += "\n\t\t\t\torigin " + origin.dumpXtext();
+        xtext_str +=  "\n\t\t\t\tmass Mass { value " + std::to_string(this->mass) + " }";
+        xtext_str += "\n\t\t\t\tinertia Inertial { ixx " +  std::to_string(this->ixx) + " " +
+            "ixy " +  std::to_string(this->ixy) + " " +
+            "ixz " +  std::to_string(this->ixz) + " " +
+            "iyy " +  std::to_string(this->iyy) + " " +
+            "iyz " +  std::to_string(this->iyz) + " " +
+            "izz " +  std::to_string(this->izz) + " }";
+
+        xtext_str += " }";
+
+        return xtext_str;
+    }
+};
+typedef std::shared_ptr<InertialXtext> InertialXtextSharedPtr;
+
+
+class MaterialXtext : public Material {
+
+};
+
+
 class VisualXtext : public Visual, GeometryHandler {
 public:
     std::string dumpXtext() const {
@@ -196,6 +235,10 @@ class LinkXtext : public Link {
 public:
     std::string dumpXtext() const {
         std::string xtext_str = "\t\tLink { name " + this->name;
+        InertialXtextSharedPtr inertial = std::static_pointer_cast<InertialXtext>(this->inertial);
+        if(inertial) {
+            xtext_str += inertial->dumpXtext();
+        }
         VisualXtextSharedPtr visual = std::static_pointer_cast<VisualXtext>(this->visual);
         if(visual) {
             xtext_str += visual->dumpXtext();
