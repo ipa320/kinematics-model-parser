@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>urdf_model_generator</name>
+  <version>0.0.0</version>
+  <description>The urdf_model_generator package</description>
+
+  <maintainer email="harshavardhan.deshpande@ipa.fraunhofer.de">Harsh Deshpande</maintainer>
+  <author email="harshavardhan.deshpande@ipa.fraunhofer.de">Harsh Deshpande</author>
+  <license>Apache 2.0</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>urdf</build_depend>
+  <build_export_depend>urdf</build_export_depend>
+  <exec_depend>urdf</exec_depend>
+
+  <export>
+  </export>
+</package>
