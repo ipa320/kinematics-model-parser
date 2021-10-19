@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+
+import sys
+import xml.dom.minidom
+from xml.etree.ElementTree import dump
+
+import rospy
+import xacro
+import urdf_parser_py.urdf as urdf #import URDF, Link, Joint, Robot, 
+
+
+def print_macro(m, name, symbols=None):
+    print("name: " + name)
+    print("body:")
+    print(m.body.toprettyxml())
+    print("params: " + ', '.join(str(p) for p in m.params))
+    print("defaultmap: " + ', '.join(str(k) + " : " + str(m.defaultmap[k][1]) for k in m.defaultmap))
+    print("history: " + ', '.join(str(p) for p in m.history))
+
+    print(symbols)
+
+
+def dump_xtext_vector3(vec3: list, keyword: str) -> str:
+    return keyword + ' "' + ' '.join(str(v) for v in vec3) + '"'
+
+def dump_xtext_pose(pose: urdf.Pose, keyword: str) -> str:
+    return keyword + ' Pose { ' + dump_xtext_vector3(pose.rpy, 'rpy') + ' ' \
+        + dump_xtext_vector3(pose.xyz, 'xyz') + ' }'
+
+def dump_xtext_geometry(geometry: urdf.GeometricType):
+    xtext_str = 'geometry Geometry {\n\t\t\t\t\t'
+
+    if type(geometry) == urdf.Cylinder:
+        xtext_str += 'cylinder Cylinder { length ' + str(geometry.length) + ' radius ' + str(geometry.radius) + ' } }'
+    return xtext_str
+
+def dump_xtext_inertial(inertial: urdf.Inertial) -> str:
+    xtext_str = '\n\t\t\tinertial Inertial {'
+    if inertial.origin:
+        xtext_str += '\n\t\t\t\t' + dump_xtext_pose(inertial.origin, 'origin')
+    xtext_str += ' }'
+    return xtext_str
+
+def dump_xtext_visual(visual: urdf.Visual) -> str:
+    xtext_str = '\n\t\t\tvisual Visual {'
+    if visual.origin:
+        xtext_str += '\n\t\t\t\t' + dump_xtext_pose(visual.origin, 'origin')
+    if visual.geometry:
+        xtext_str += '\n\t\t\t\t' + dump_xtext_geometry(visual.geometry)
+    xtext_str += ' }'
+    return xtext_str
+
+def dump_xtext_collision(collision: urdf.Collision) -> str:
+    xtext_str = '\n\t\t\tcollision Collision {'
+    if collision.origin:
+        xtext_str += '\n\t\t\t\t' + dump_xtext_pose(collision.origin, 'origin')
+    if collision.geometry:
+        xtext_str += '\n\t\t\t\t' + dump_xtext_geometry(collision.geometry)
+    xtext_str += ' }'
+    return xtext_str
+
+def dump_xtext_link(link: urdf.Link) -> str:
+    xtext_str = '\t\tLink { name ' + link.name
+    if link.inertial:
+        xtext_str += dump_xtext_inertial(link.inertial)
+    if len(link.visuals) > 0:
+        xtext_str += dump_xtext_visual(link.visuals[0])
+    if len(link.collisions) > 0:
+        xtext_str += dump_xtext_collision(link.collisions[0])
+    xtext_str += ' },\n'
+    return xtext_str
+
+def dump_xtext_joint(joint: urdf.Joint) -> str:
+    xtext_str = '\t\tJoint { name ' + joint.name + \
+        '\n\t\t\ttype ' + joint.type
+    xtext_str += '\n\t\t\tparent ' + joint.parent + \
+        '\n\t\t\tchild ' + joint.child
+    if joint.origin:
+        xtext_str += '\n\t\t\t' + dump_xtext_pose(joint.origin, 'origin')
+    if joint.axis:
+        xtext_str += '\n\t\t\taxis Axis { ' + dump_xtext_vector3(joint.axis, 'xyz') + ' }'
+    if joint.limit:
+        xtext_str += '\n\t\t\tlimit Limit { ' + \
+            'effort ' + str(float(joint.limit.effort)) + \
+            ' lower ' + str(float(joint.limit.lower)) + \
+            ' upper ' + str(float(joint.limit.upper)) + \
+            ' velocity ' + str(float(joint.limit.velocity)) + ' }'
+    xtext_str += ' },\n'
+    return xtext_str
+
+def dump_xtext_robot(robot: urdf.Robot, params) -> str:
+    xtext_str = '\nMacro { name ' + robot.name
+
+    if len(params) > 0:
+        xtext_str += '\n\tparameter {'
+        for param in params:
+            xtext_str += '\n\t\tParameter ' + param + ' { },'
+        xtext_str = xtext_str[:-1] + ' }'
+
+    xtext_str += '\n\tbody Body {'
+    if len(robot.links) > 0:
+        xtext_str += '\n\tlink{\n'''
+        for link in robot.links:
+            xtext_str += dump_xtext_link(link)
+        xtext_str = xtext_str[:-2] + ' }'
+
+    if len(robot.joints) > 0:
+        xtext_str += '\n\tjoint{\n'
+        for joint in robot.joints:
+            xtext_str += dump_xtext_joint(joint)
+        xtext_str = xtext_str[:-2] + ' }'
+    
+    xtext_str += ' } },'
+    return xtext_str
+
+def dump_xtext(name, robots, params):
+    xtext_str = 'Robot { name ' + name + '\nmacro {' 
+    
+    for i in range(len(robots)):
+        xtext_str += dump_xtext_robot(robots[i], params[i])
+
+    xtext_str = xtext_str[:-1] + ' } }\n'
+    return xtext_str
+
+def parse_macros(macros, symbols):
+    robots = []
+    params = []
+
+    for name in macros:
+        macro = macros[name]
+        robot = urdf.Robot(name=name, version='1.0')
+        
+        node = macro.body
+        node = node.firstChild
+        while node:
+            next = node.nextSibling
+            if node.nodeType == xml.dom.Node.ELEMENT_NODE:
+                if node.tagName == 'link':
+                    link = urdf.Link.from_xml_string(node.toprettyxml())
+                    robot.add_link(link)
+                if node.tagName == 'joint':
+                    joint = urdf.Joint.from_xml_string(node.toprettyxml())
+                    robot.add_joint(joint)
+
+            node = next
+
+        robots.append(robot)
+        params.append(macro.params)
+
+    return robots, params
+
+
+def process_file(input_file_name, **kwargs):
+    """main processing pipeline"""
+    # initialize file stack for error-reporting
+    xacro.init_stacks(input_file_name)
+    # parse the document into a xml.dom tree
+    doc = xacro.parse(None, input_file_name)
+    # perform macro replacement
+    macros, symbols = process_doc(doc, **kwargs)
+
+    # parse URDF elements -- joints, links, etc
+    robots, params = parse_macros(macros, symbols)
+
+    name = input_file_name.split('/')[-1].split('.')[0]
+
+    xtext_str = dump_xtext(name, robots, params)
+    print(xtext_str)
+
+    return doc
+
+
+def process_doc(doc, mappings=None, **kwargs):
+    global verbosity
+    verbosity = kwargs.get('verbosity', xacro.verbosity)
+
+    # set substitution args
+    xacro.substitution_args_context['arg'] = {} if mappings is None else mappings
+
+    # if not yet defined: initialize filestack
+    if not xacro.filestack:
+        xacro.init_stacks(None)
+
+    macros = xacro.Table()
+    symbols = xacro.Table(xacro._global_symbols)
+
+    # apply xacro:targetNamespace as global xmlns (if defined)
+    targetNS = doc.documentElement.getAttribute('xacro:targetNamespace')
+    if targetNS:
+        doc.documentElement.removeAttribute('xacro:targetNamespace')
+        doc.documentElement.setAttribute('xmlns', targetNS)
+
+    xacro.eval_all(doc.documentElement, macros, symbols)
+
+    # reset substitution args
+    xacro.substitution_args_context['arg'] = {}
+
+    return macros, symbols
+
+
+if __name__ == "__main__":
+    opts, input_file_name = xacro.process_args(sys.argv[1:])
+    try:
+        # open and process file
+        doc = process_file(input_file_name, **vars(opts))
+        # print()
+
+    # error handling
+    except xml.parsers.expat.ExpatError as e:
+        xacro.error("XML parsing error: %s" % unicode(e), alt_text=None)
+        if xacro.verbosity > 0:
+            xacro.print_location()
+            print(file=sys.stderr)  # add empty separator line before error
+            print("Check that:", file=sys.stderr)
+            print(" - Your XML is well-formed", file=sys.stderr)
+            print(" - You have the xacro xmlns declaration:",
+                  "xmlns:xacro=\"http://www.ros.org/wiki/xacro\"", file=sys.stderr)
+        sys.exit(2)  # indicate failure, but don't print stack trace on XML errors
+
+    except Exception as e:
+        msg = xacro.unicode(e)
+        if not msg:
+            msg = repr(e)
+        xacro.error(msg)
+        if xacro.verbosity > 0:
+            xacro.print_location()
+        if xacro.verbosity > 1:
+            print(file=sys.stderr)  # add empty separator line before error
+            raise  # create stack trace
+        else:
+            sys.exit(2)  # gracefully exit with error condition
