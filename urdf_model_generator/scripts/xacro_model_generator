@@ -19,6 +19,40 @@ def print_macro(m, name, symbols=None):
 
     print(symbols)
 
+def identify_param_type(elem, params):
+    param_types = {}
+    if isinstance(elem, urdf.Link) or isinstance(elem, urdf.Joint):
+        for p in params:
+            if p in elem.name:
+                param_types[p] = 'String'
+                params.remove(p)
+
+    if isinstance(elem, urdf.Joint):
+        for p in params:
+            if p in elem.parent or p in elem.child:
+                param_types[p] = 'LinkRef'
+                params.remove(p)
+
+    return param_types
+
+def format_ref_link(link, params):
+    link = format_name(link)
+    link = link.replace('"', '')
+
+    if link in params:
+        return link
+
+    return '"' + link + '"'
+
+def format_name(name):
+    while '${' in name:
+        start = name.rfind('${')
+        if start != -1:
+            end = name[start:].rfind('}')
+            param = name[start+2:start+end]
+            name = name[:start] + '"' +  param + '"' + name[start+end+1:]
+
+    return name
 
 def dump_xtext_vector3(vec3: list, keyword: str) -> str:
     return keyword + ' "' + ' '.join(str(v) for v in vec3) + '"'
@@ -60,7 +94,7 @@ def dump_xtext_collision(collision: urdf.Collision) -> str:
     return xtext_str
 
 def dump_xtext_link(link: urdf.Link) -> str:
-    xtext_str = '\t\tLink { name ' + link.name
+    xtext_str = '\t\tLink { name ' + format_name(link.name)
     if link.inertial:
         xtext_str += dump_xtext_inertial(link.inertial)
     if len(link.visuals) > 0:
@@ -70,11 +104,11 @@ def dump_xtext_link(link: urdf.Link) -> str:
     xtext_str += ' },\n'
     return xtext_str
 
-def dump_xtext_joint(joint: urdf.Joint) -> str:
-    xtext_str = '\t\tJoint { name ' + joint.name + \
+def dump_xtext_joint(joint: urdf.Joint, params: list) -> str:
+    xtext_str = '\t\tJoint { name ' + format_name(joint.name) + \
         '\n\t\t\ttype ' + joint.type
-    xtext_str += '\n\t\t\tparent ' + joint.parent + \
-        '\n\t\t\tchild ' + joint.child
+    xtext_str += '\n\t\t\tparent ' + format_ref_link(joint.parent, params) + \
+        '\n\t\t\tchild ' + format_ref_link(joint.child, params)
     if joint.origin:
         xtext_str += '\n\t\t\t' + dump_xtext_pose(joint.origin, 'origin')
     if joint.axis:
@@ -93,8 +127,8 @@ def dump_xtext_robot(robot: urdf.Robot, params) -> str:
 
     if len(params) > 0:
         xtext_str += '\n\tparameter {'
-        for param in params:
-            xtext_str += '\n\t\tParameter ' + param + ' { },'
+        for param in params.keys():
+            xtext_str += '\n\t\tParameter ' + param + ' { type ' + params[param] + ' },'
         xtext_str = xtext_str[:-1] + ' }'
 
     xtext_str += '\n\tbody Body {'
@@ -107,7 +141,7 @@ def dump_xtext_robot(robot: urdf.Robot, params) -> str:
     if len(robot.joints) > 0:
         xtext_str += '\n\tjoint{\n'
         for joint in robot.joints:
-            xtext_str += dump_xtext_joint(joint)
+            xtext_str += dump_xtext_joint(joint, params)
         xtext_str = xtext_str[:-2] + ' }'
     
     xtext_str += ' } },'
@@ -129,7 +163,8 @@ def parse_macros(macros, symbols):
     for name in macros:
         macro = macros[name]
         robot = urdf.Robot(name=name, version='1.0')
-        
+        m_params = {}
+
         node = macro.body
         node = node.firstChild
         while node:
@@ -138,14 +173,18 @@ def parse_macros(macros, symbols):
                 if node.tagName == 'link':
                     link = urdf.Link.from_xml_string(node.toprettyxml())
                     robot.add_link(link)
+                    param_types = identify_param_type(link, macro.params)
+                    m_params.update(param_types)
                 if node.tagName == 'joint':
                     joint = urdf.Joint.from_xml_string(node.toprettyxml())
                     robot.add_joint(joint)
+                    param_types = identify_param_type(joint, macro.params)
+                    m_params.update(param_types)
 
             node = next
 
         robots.append(robot)
-        params.append(macro.params)
+        params.append(m_params)
 
     return robots, params
 
