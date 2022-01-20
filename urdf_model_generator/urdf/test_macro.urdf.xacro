@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://wiki.ros.org/xacro">
     <xacro:macro name="link_wheel" params="link_name">
-        <link name="${link_name}">
+        <link name="${link_name}_link">
             <inertial>
               <mass value="0.2"/>
               <origin rpy="0 1.5707 1.5707" xyz="0 0 0"/>
@@ -22,11 +22,11 @@
         </link>
     </xacro:macro>
 
-    <xacro:macro name="joint_wheel" params="link_name child origin_xyz">
+    <xacro:macro name="joint_wheel" params="link_name child_ origin_xyz">
       <joint name="${link_name}" type="continuous">
         <origin rpy="0 0 0" xyz="0 0 0"/>
-        <child link="${child}"/>
-        <parent link="link_chassis"/>
+        <child link="${child_}"/>
+        <parent link="${link_name}_link"/>
         <axis rpy="0 0 0" xyz="0 1 0"/>
         <limit effort="10000" velocity="1000"/>
       </joint>
