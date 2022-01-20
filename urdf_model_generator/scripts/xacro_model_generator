@@ -78,13 +78,13 @@ def dump_xtext_joint(joint: urdf.Joint) -> str:
     if joint.origin:
         xtext_str += '\n\t\t\t' + dump_xtext_pose(joint.origin, 'origin')
     if joint.axis:
-        xtext_str += '\n\t\t\taxis Axis { ' + dump_xtext_vector3(joint.axis, 'xyz') + ' }'
+        xtext_str += '\n\t\t\taxis Vector3 { ' + dump_xtext_vector3(joint.axis, 'xyz') + ' }'
     if joint.limit:
         xtext_str += '\n\t\t\tlimit Limit { ' + \
-            'effort ' + str(float(joint.limit.effort)) + \
-            ' lower ' + str(float(joint.limit.lower)) + \
-            ' upper ' + str(float(joint.limit.upper)) + \
-            ' velocity ' + str(float(joint.limit.velocity)) + ' }'
+            'effort "' + str(float(joint.limit.effort)) + \
+            '" lower "' + str(float(joint.limit.lower)) + \
+            '" upper "' + str(float(joint.limit.upper)) + \
+            '" velocity "' + str(float(joint.limit.velocity)) + '" }'
     xtext_str += ' },\n'
     return xtext_str
 
