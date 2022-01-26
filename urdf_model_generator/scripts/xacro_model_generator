@@ -256,17 +256,6 @@ class Body(object):
         return xtext_str
 
 
-def print_macro(m, name, symbols=None):
-    print("name: " + name)
-    print("body:")
-    print(m.body.toprettyxml())
-    print("params: " + ', '.join(str(p) for p in m.params))
-    print("defaultmap: " + ', '.join(str(k) + " : " + str(m.defaultmap[k][1]) for k in m.defaultmap))
-    print("history: " + ', '.join(str(p) for p in m.history))
-
-    print(symbols)
-
-
 def identify_param_type(elem, params):
     param_types = {}
     if isinstance(elem, Link) or isinstance(elem, Joint):
