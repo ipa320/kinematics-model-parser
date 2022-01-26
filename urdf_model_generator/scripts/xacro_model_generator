@@ -2,11 +2,9 @@
 
 import sys
 import xml.dom.minidom
-from xml.etree.ElementTree import dump
 
 import rospy
 import xacro
-import urdf_parser_py.urdf as urdf #import URDF, Link, Joint, Robot, 
 
 
 class Robot(object):
