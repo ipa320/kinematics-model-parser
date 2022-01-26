@@ -42,7 +42,8 @@ class Macro(object):
             xtext_str += '\n' + indent * (level+1) + 'parameter {'
             for param in self.params.keys():
                 pass
-                xtext_str += '\n' + indent * (level+2) + 'Parameter ' + param + ' { type '  + self.params[param] + ' },'
+                xtext_str += '\n' + indent * (level+2) + 'Parameter ' + \
+                    param + ' { type '  + self.params[param] + ' },'
             xtext_str = xtext_str[:-1] + ' }'
         xtext_str += self.body.dump_xtext(indent, level+1) + ' },'
         return xtext_str
@@ -55,7 +56,8 @@ class Origin(object):
         self.ref = ''
 
     def dump_xtext(self, indent='', level=1):
-        return '\n' + indent*level + 'origin Pose { rpy "' + self.rpy + '" xyz "' + self.xyz + '" }'
+        return '\n' + indent*level + 'origin Pose { rpy "' + self.rpy + \
+             '" xyz "' + self.xyz + '" }'
 
 
 class Limit(object):
@@ -76,7 +78,8 @@ class Mesh(object):
         self.filename = ''
 
     def dump_xtext(self, indent='', level=1):
-        return '\n' + indent*level + 'mesh Mesh { filename "' + self.filename + '" }'
+        return '\n' + indent*level + 'mesh Mesh { filename "' + \
+            self.filename + '" }'
 
 
 class Cylinder(object):
@@ -193,7 +196,8 @@ class Link(object):
         self.inertial = None
 
     def dump_xtext(self, indent='', level=1):
-        xtext_str = '\n' + indent*level + 'Link { name ' + format_name(self.name)
+        xtext_str = '\n' + indent*level + 'Link { name ' + \
+            format_name(self.name)
         if self.inertial:
             xtext_str += self.inertial.dump_xtext(indent, level+1)
         if self.visual:
@@ -216,18 +220,21 @@ class Joint(object):
         self.limit = None
 
     def dump_xtext(self, indent='', level=1):
-        xtext_str = '\n' + indent*level + 'Joint { name ' + format_name(self.name) + ' type ' + self.type + \
+        xtext_str = '\n' + indent*level + 'Joint { name ' + \
+            format_name(self.name) + ' type ' + self.type + \
             '\n' + indent*(level+1) + 'parent ' + format_name(self.parent) + \
             '\n' + indent*(level+1) + 'child ' + format_name(self.child)
         if self.origin:
             xtext_str += self.origin.dump_xtext(indent, level+1)
         if self.axis:
-            xtext_str += '\n' + indent*(level+1) + 'axis Vector3 { xyz "' + self.axis + '" }'
+            xtext_str += '\n' + indent*(level+1) + 'axis Vector3 { xyz "' + \
+                self.axis + '" }'
         if self.limit:
             xtext_str += self.limit.dump_xtext(indent, level+1)
         xtext_str += ' },'
 
         return xtext_str
+
 
 class Body(object):
     def __init__(self):
@@ -311,12 +318,12 @@ def parse_elem(node, parent):
                 else:
                     try:
                         # create an object of type node.tagName
-                        # e.g. is tag name is 'visual', create object of type Visual
+                        # e.g. is tag name is 'visual', create object
+                        # of type Visual
                         # the parent has an attribute of this type
                         cls = globals()[node.tagName.capitalize()]
                         elem = cls()
                         for name, value in node.attributes.items():
-                            # print(name + ' ' + value)
                             setattr(elem, name, format_name(value))
                         setattr(parent, node.tagName, elem)
                     except Exception as e:
@@ -397,7 +404,8 @@ def process_doc(doc, mappings=None, **kwargs):
     verbosity = kwargs.get('verbosity', xacro.verbosity)
 
     # set substitution args
-    xacro.substitution_args_context['arg'] = {} if mappings is None else mappings
+    xacro.substitution_args_context['arg'] = {} if mappings is None \
+        else mappings
 
     # if not yet defined: initialize filestack
     if not xacro.filestack:
@@ -436,8 +444,10 @@ if __name__ == "__main__":
             print("Check that:", file=sys.stderr)
             print(" - Your XML is well-formed", file=sys.stderr)
             print(" - You have the xacro xmlns declaration:",
-                  "xmlns:xacro=\"http://www.ros.org/wiki/xacro\"", file=sys.stderr)
-        sys.exit(2)  # indicate failure, but don't print stack trace on XML errors
+                  "xmlns:xacro=\"http://www.ros.org/wiki/xacro\"",
+                  file=sys.stderr)
+        sys.exit(2)  # indicate failure,
+                     # but don't print stack trace on XML errors
 
     except Exception as e:
         msg = xacro.unicode(e)
