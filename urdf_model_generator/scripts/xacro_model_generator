@@ -268,15 +268,16 @@ def print_macro(m, name, symbols=None):
 
     print(symbols)
 
+
 def identify_param_type(elem, params):
     param_types = {}
-    if isinstance(elem, urdf.Link) or isinstance(elem, urdf.Joint):
+    if isinstance(elem, Link) or isinstance(elem, Joint):
         for p in params:
             if p in elem.name:
                 param_types[p] = 'String'
                 params.remove(p)
 
-    if isinstance(elem, urdf.Joint):
+    if isinstance(elem, Joint):
         for p in params:
             if p in elem.parent or p in elem.child:
                 param_types[p] = 'LinkRef'
@@ -284,16 +285,20 @@ def identify_param_type(elem, params):
 
     return param_types
 
+
 def format_ref_link(link, params):
     link = format_name(link)
     link = link.replace('"', '')
 
-    if link in params:
+    if link in params.keys():
         return link
 
     return '"' + link + '"'
 
+
 def format_name(name):
+    if 'radians' in name:
+        return name
     while '${' in name:
         start = name.rfind('${')
         if start != -1:
@@ -303,139 +308,84 @@ def format_name(name):
 
     return name
 
-def dump_xtext_vector3(vec3: list, keyword: str) -> str:
-    return keyword + ' "' + ' '.join(str(v) for v in vec3) + '"'
 
-def dump_xtext_pose(pose: urdf.Pose, keyword: str) -> str:
-    return keyword + ' Pose { ' + dump_xtext_vector3(pose.rpy, 'rpy') + ' ' \
-        + dump_xtext_vector3(pose.xyz, 'xyz') + ' }'
+# recursively traverses the xacro instance and
+# creates corresponding kinematics instances
+def parse_elem(node, parent):
+    node = node.firstChild
+    elem = None
+    while node:
+        next = node.nextSibling
+        if node.nodeType == xml.dom.Node.ELEMENT_NODE:
+            if hasattr(parent, node.tagName):
+                if isinstance(getattr(parent, node.tagName), str):
+                    for name, value in node.attributes.items():
+                        setattr(parent, node.tagName, format_name(value))
+                else:
+                    try:
+                        # create an object of type node.tagName
+                        # e.g. is tag name is 'visual', create object of type Visual
+                        # the parent has an attribute of this type
+                        cls = globals()[node.tagName.capitalize()]
+                        elem = cls()
+                        for name, value in node.attributes.items():
+                            # print(name + ' ' + value)
+                            setattr(elem, name, format_name(value))
+                        setattr(parent, node.tagName, elem)
+                    except Exception as e:
+                        print(e)
+                        return
+            else:
+                try:
+                    # create an object of type node.tagName
+                    # e.g. is tag name is 'link', create object of type Link
+                    # the parent usually maintains a list in this case 'links'
+                    cls = globals()[node.tagName.capitalize()]
+                    elem = cls()
+                    for name, value in node.attributes.items():
+                        setattr(elem, name, format_name(value))
+                    func = getattr(parent, 'add_' + node.tagName)
+                    func(elem)
+                except Exception as e:
+                    print(e)
+                    return
 
-def dump_xtext_geometry(geometry: urdf.GeometricType):
-    xtext_str = 'geometry Geometry {\n\t\t\t\t\t'
+        parse_elem(node, elem)
+        node = next
 
-    if type(geometry) == urdf.Cylinder:
-        xtext_str += 'cylinder Cylinder { length ' + str(geometry.length) + ' radius ' + str(geometry.radius) + ' } }'
-    return xtext_str
-
-def dump_xtext_inertial(inertial: urdf.Inertial) -> str:
-    xtext_str = '\n\t\t\tinertial Inertial {'
-    if inertial.origin:
-        xtext_str += '\n\t\t\t\t' + dump_xtext_pose(inertial.origin, 'origin')
-    xtext_str += ' }'
-    return xtext_str
-
-def dump_xtext_visual(visual: urdf.Visual) -> str:
-    xtext_str = '\n\t\t\tvisual Visual {'
-    if visual.origin:
-        xtext_str += '\n\t\t\t\t' + dump_xtext_pose(visual.origin, 'origin')
-    if visual.geometry:
-        xtext_str += '\n\t\t\t\t' + dump_xtext_geometry(visual.geometry)
-    xtext_str += ' }'
-    return xtext_str
-
-def dump_xtext_collision(collision: urdf.Collision) -> str:
-    xtext_str = '\n\t\t\tcollision Collision {'
-    if collision.origin:
-        xtext_str += '\n\t\t\t\t' + dump_xtext_pose(collision.origin, 'origin')
-    if collision.geometry:
-        xtext_str += '\n\t\t\t\t' + dump_xtext_geometry(collision.geometry)
-    xtext_str += ' }'
-    return xtext_str
-
-def dump_xtext_link(link: urdf.Link) -> str:
-    xtext_str = '\t\tLink { name ' + format_name(link.name)
-    if link.inertial:
-        xtext_str += dump_xtext_inertial(link.inertial)
-    if len(link.visuals) > 0:
-        xtext_str += dump_xtext_visual(link.visuals[0])
-    if len(link.collisions) > 0:
-        xtext_str += dump_xtext_collision(link.collisions[0])
-    xtext_str += ' },\n'
-    return xtext_str
-
-def dump_xtext_joint(joint: urdf.Joint, params: list) -> str:
-    xtext_str = '\t\tJoint { name ' + format_name(joint.name) + \
-        '\n\t\t\ttype ' + joint.type
-    xtext_str += '\n\t\t\tparent ' + format_ref_link(joint.parent, params) + \
-        '\n\t\t\tchild ' + format_ref_link(joint.child, params)
-    if joint.origin:
-        xtext_str += '\n\t\t\t' + dump_xtext_pose(joint.origin, 'origin')
-    if joint.axis:
-        xtext_str += '\n\t\t\taxis Vector3 { ' + dump_xtext_vector3(joint.axis, 'xyz') + ' }'
-    if joint.limit:
-        xtext_str += '\n\t\t\tlimit Limit { ' + \
-            'effort "' + str(float(joint.limit.effort)) + \
-            '" lower "' + str(float(joint.limit.lower)) + \
-            '" upper "' + str(float(joint.limit.upper)) + \
-            '" velocity "' + str(float(joint.limit.velocity)) + '" }'
-    xtext_str += ' },\n'
-    return xtext_str
-
-def dump_xtext_robot(robot: urdf.Robot, params) -> str:
-    xtext_str = '\nMacro { name ' + robot.name
-
-    if len(params) > 0:
-        xtext_str += '\n\tparameter {'
-        for param in params.keys():
-            xtext_str += '\n\t\tParameter ' + param + ' { type ' + params[param] + ' },'
-        xtext_str = xtext_str[:-1] + ' }'
-
-    xtext_str += '\n\tbody Body {'
-    if len(robot.links) > 0:
-        xtext_str += '\n\tlink{\n'''
-        for link in robot.links:
-            xtext_str += dump_xtext_link(link)
-        xtext_str = xtext_str[:-2] + ' }'
-
-    if len(robot.joints) > 0:
-        xtext_str += '\n\tjoint{\n'
-        for joint in robot.joints:
-            xtext_str += dump_xtext_joint(joint, params)
-        xtext_str = xtext_str[:-2] + ' }'
-    
-    xtext_str += ' } },'
-    return xtext_str
-
-def dump_xtext(name, robots, params):
-    xtext_str = 'Robot { name ' + name + '\nmacro {' 
-    
-    for i in range(len(robots)):
-        xtext_str += dump_xtext_robot(robots[i], params[i])
-
-    xtext_str = xtext_str[:-1] + ' } }\n'
-    return xtext_str
 
 def parse_macros(macros, symbols):
-    robots = []
-    params = []
+    robot = Robot('dummy')
 
     for name in macros:
-        macro = macros[name]
-        robot = urdf.Robot(name=name, version='1.0')
+        m = macros[name]
+
+        macro = Macro(name)
         m_params = {}
 
-        node = macro.body
-        node = node.firstChild
-        while node:
-            next = node.nextSibling
-            if node.nodeType == xml.dom.Node.ELEMENT_NODE:
-                if node.tagName == 'link':
-                    link = urdf.Link.from_xml_string(node.toprettyxml())
-                    robot.add_link(link)
-                    param_types = identify_param_type(link, macro.params)
-                    m_params.update(param_types)
-                if node.tagName == 'joint':
-                    joint = urdf.Joint.from_xml_string(node.toprettyxml())
-                    robot.add_joint(joint)
-                    param_types = identify_param_type(joint, macro.params)
-                    m_params.update(param_types)
+        body = Body()
+        parse_elem(m.body, body)
 
-            node = next
+        if len(body.links) > 0:
+            for link in body.links:
+                param_types = identify_param_type(link, m.params)
+                m_params.update(param_types)
+        if len(body.joints) > 0:
+            for joint in body.joints:
+                param_types = identify_param_type(joint, m.params)
+                m_params.update(param_types)
 
-        robots.append(robot)
-        params.append(m_params)
+        for joint in body.joints:
+            joint.parent = format_ref_link(joint.parent, m_params)
+            joint.child = format_ref_link(joint.child, m_params)
 
-    return robots, params
+        macro.body = body
+        macro.params.update(m_params)
+        robot.add_macro(macro)
+
+    print(robot.dump_xtext('  '))
+
+    return robot
 
 
 def process_file(input_file_name, **kwargs):
@@ -448,12 +398,9 @@ def process_file(input_file_name, **kwargs):
     macros, symbols = process_doc(doc, **kwargs)
 
     # parse URDF elements -- joints, links, etc
-    robots, params = parse_macros(macros, symbols)
+    robot = parse_macros(macros, symbols)
 
     name = input_file_name.split('/')[-1].split('.')[0]
-
-    xtext_str = dump_xtext(name, robots, params)
-    print(xtext_str)
 
     return doc
 
