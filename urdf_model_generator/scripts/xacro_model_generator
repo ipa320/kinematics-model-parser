@@ -9,6 +9,255 @@ import xacro
 import urdf_parser_py.urdf as urdf #import URDF, Link, Joint, Robot, 
 
 
+class Robot(object):
+    def __init__(self, name, version=''):
+        self.version = version
+        self.name = name
+        self.macros = list()
+        self.body = None
+
+    def add_macro(self, m):
+        self.macros.append(m)
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = 'Robot { name ' + self.name
+        if len(self.macros) > 0:
+            xtext_str += '\n' + indent * level + 'macro {'
+            for macro in self.macros:
+                xtext_str += macro.dump_xtext(indent, level+1)
+        xtext_str = xtext_str[:-1] + ' } }'
+        return xtext_str
+
+
+class Macro(object):
+    def __init__(self, name):
+        self.name = name
+        self.body = None
+        self.params = dict()
+
+    def add_param(self, p_name, p_type):
+        self.params.update({p_name, p_type})
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'Macro { name ' + self.name
+        if len(self.params) > 0:
+            xtext_str += '\n' + indent * (level+1) + 'parameter {'
+            for param in self.params.keys():
+                pass
+                xtext_str += '\n' + indent * (level+2) + 'Parameter ' + param + ' { type '  + self.params[param] + ' },'
+            xtext_str = xtext_str[:-1] + ' }'
+        xtext_str += self.body.dump_xtext(indent, level+1) + ' },'
+        return xtext_str
+
+
+class Origin(object):
+    def __init__(self):
+        self.rpy = ''
+        self.xyz = ''
+        self.ref = ''
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent*level + 'origin Pose { rpy "' + self.rpy + '" xyz "' + self.xyz + '" }'
+
+
+class Limit(object):
+    def __init__(self):
+        self.effort = ''
+        self.velocity = ''
+        self.lower = ''
+        self.upper = ''
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent*level + 'limit Limit { effort "' + self.effort + \
+            '" lower "' + self.lower + '" upper "' + self.upper + \
+            '" velocity "' + self.velocity + '" }'
+
+
+class Mesh(object):
+    def __init__(self):
+        self.filename = ''
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent*level + 'mesh Mesh { filename "' + self.filename + '" }'
+
+
+class Cylinder(object):
+    def __init__(self):
+        self.radius = ''
+        self.length = ''
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent*level + 'cylinder Cylinder { length ' \
+            + self.length + ' radius ' + self.radius + ' }'
+
+
+class Geometry(object):
+    def __init__(self):
+        self.mesh = None
+        self.cylinder = None
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'geometry Geometry {'
+        if self.mesh:
+            xtext_str += self.mesh.dump_xtext(indent, level+1)
+        elif self.cylinder:
+            xtext_str += self.cylinder.dump_xtext(indent, level+1)
+        xtext_str += ' }'
+
+        return xtext_str
+
+
+class Mass(object):
+    def __init__(self):
+        self.value = ''
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent*level + 'mass Mass { value ' + self.value + ' }'
+
+
+class Inertia(object):
+    def __init__(self):
+        self.ixx = ''
+        self.ixy = ''
+        self.ixz = ''
+        self.iyy = ''
+        self.iyz = ''
+        self.izz = ''
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent*level + 'inertia Inertia {' + \
+            ' ixx ' + str(float(self.ixx)) + \
+            ' ixy ' + str(float(self.ixy)) + \
+            ' ixz ' + str(float(self.ixz)) + \
+            ' iyy ' + str(float(self.iyy)) + \
+            ' iyz ' + str(float(self.iyz)) + \
+            ' izz ' + str(float(self.izz)) + ' }'
+
+
+class Inertial(object):
+    def __init__(self):
+        self.mass = None
+        self.origin = None
+        self.inertia = None
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'inertial Inertial { '
+        if self.origin:
+            xtext_str += self.origin.dump_xtext(indent, level+1)
+        if self.mass:
+            xtext_str += self.mass.dump_xtext(indent, level+1)
+        if self.inertia:
+            xtext_str += self.inertia.dump_xtext(indent, level+1)
+        xtext_str += ' }'
+
+        return xtext_str
+
+
+class Visual(object):
+    def __init__(self):
+        self.name = ''
+        self.geometry = None
+        self.origin = None
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'visual Visual {'
+        if self.origin:
+            xtext_str += self.origin.dump_xtext(indent, level+1)
+        if self.geometry:
+            xtext_str += self.geometry.dump_xtext(indent, level+1)
+        xtext_str += ' }'
+
+        return xtext_str
+
+
+class Collision(object):
+    def __init__(self):
+        self.name = ''
+        self.geometry = None
+        self.origin = None
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'collision Collision {'
+        if self.origin:
+            xtext_str += self.origin.dump_xtext(indent, level+1)
+        if self.geometry:
+            xtext_str += self.geometry.dump_xtext(indent, level+1)
+        xtext_str += ' }'
+
+        return xtext_str
+
+
+class Link(object):
+    def __init__(self):
+        self.name = ''
+        self.visual = None
+        self.collision = None
+        self.inertial = None
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'Link { name ' + format_name(self.name)
+        if self.inertial:
+            xtext_str += self.inertial.dump_xtext(indent, level+1)
+        if self.visual:
+            xtext_str += self.visual.dump_xtext(indent, level+1)
+        if self.collision:
+            xtext_str += self.collision.dump_xtext(indent, level+1)
+        xtext_str += ' },'
+
+        return xtext_str
+
+
+class Joint(object):
+    def __init__(self):
+        self.name = ''
+        self.type = ''
+        self.parent = ''
+        self.child = ''
+        self.origin = None
+        self.axis = ''
+        self.limit = None
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'Joint { name ' + format_name(self.name) + ' type ' + self.type + \
+            '\n' + indent*(level+1) + 'parent ' + format_name(self.parent) + \
+            '\n' + indent*(level+1) + 'child ' + format_name(self.child)
+        if self.origin:
+            xtext_str += self.origin.dump_xtext(indent, level+1)
+        if self.axis:
+            xtext_str += '\n' + indent*(level+1) + 'axis Vector3 { xyz "' + self.axis + '" }'
+        if self.limit:
+            xtext_str += self.limit.dump_xtext(indent, level+1)
+        xtext_str += ' },'
+
+        return xtext_str
+
+class Body(object):
+    def __init__(self):
+        self.links = list()
+        self.joints = list()
+
+    def add_link(self, link):
+        self.links.append(link)
+
+    def add_joint(self, joint):
+        self.joints.append(joint)
+
+    def dump_xtext(self, indent='', level=1):
+        xtext_str = '\n' + indent*level + 'body Body {'
+        if len(self.links) > 0:
+            xtext_str += '\n' + indent*(level+1) + 'link {'
+            for link in self.links:
+                xtext_str += link.dump_xtext(indent, level+2)
+            xtext_str = xtext_str[:-1] + ' }'
+        if len(self.joints) > 0:
+            xtext_str += '\n' + indent*(level+1) + 'joint {'
+            for joint in self.joints:
+                xtext_str += joint.dump_xtext(indent, level+2)
+            xtext_str = xtext_str[:-1] + ' }'
+        xtext_str += ' }'
+        return xtext_str
+
+
 def print_macro(m, name, symbols=None):
     print("name: " + name)
     print("body:")
