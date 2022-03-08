@@ -19,5 +19,5 @@ The executable is not a ROS node and has to be run as a regular C++ executable. 
 `urdf-file`: path to `URDF` file to be parsed  
 `model-file`: path to kinematics model file to be saved
 ```
-./kinematics_ws/devel/lib/urdf_model_generator/urdf_model_generator urdf-file model-file
+rosrun urdf_model_generator xacro_model_generator urdf-file model-file
 ```
