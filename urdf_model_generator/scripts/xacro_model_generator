@@ -228,10 +228,7 @@ class Joint(object):
             '\n' + indent*(level+1) + 'parent ' + format_name(self.parent) + \
             '\n' + indent*(level+1) + 'child ' + format_name(self.child)
         if self.origin:
-            if type(self.origin) == str:
-                xtext_str += '\n' + indent*(level+1) + 'origin "' + self.origin + '"'
-            else:
-                xtext_str += self.origin.dump_xtext(indent, level+1)
+            xtext_str += self.origin.dump_xtext(indent, level+1)
         if self.axis:
             xtext_str += '\n' + indent*(level+1) + 'axis Vector3 { xyz "' + \
                 self.axis + '" }'
@@ -281,6 +278,20 @@ class Body(object):
         return xtext_str
 
 
+class XacroStr(str):
+    def set_keyword(self, keyword=''):
+        self.keyword = keyword
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent * level + self.keyword + ' "' + self + '"'
+
+
+def get_xacro_str(ref_name, keyword):
+    xacroStr = XacroStr(ref_name)
+    xacroStr.set_keyword(keyword)
+    return xacroStr
+
+
 def identify_param_type(elem, params):
     param_types = {}
     if isinstance(elem, Link) or isinstance(elem, Joint):
@@ -323,9 +334,20 @@ def format_name(name, symbols=None):
     return name
 
 
+def handle_macros(parent, node, name, macros):
+    if name in macros.keys():
+        node = macros[name].body.firstChild
+        while node.nodeType != xml.dom.Node.ELEMENT_NODE:
+            node = node.nextSibling
+
+        setattr(parent, node.tagName, get_xacro_str(name, node.tagName))
+        return True
+    return False
+
+
 # recursively traverses the xacro instance and
 # creates corresponding kinematics instances
-def parse_elem(node, parent, symbols, params):
+def parse_elem(node, parent, symbols, params, macros):
     node = node.firstChild
     elem = None
     while node:
@@ -337,14 +359,17 @@ def parse_elem(node, parent, symbols, params):
 
                 # Assuming '*' is origin block. Better solution?
                 if ("*" + name) in params and hasattr(parent, 'origin'):
-                    setattr(parent, 'origin', name)
+                    setattr(parent, 'origin', get_xacro_str(name, 'origin'))
 
             elif hasattr(parent, tagName):
+                # print(str(parent) + ' ' + tagName)
                 if isinstance(getattr(parent, tagName), str):
                     for name, value in node.attributes.items():
                         setattr(parent, node.tagName, format_name(value))
                 elif tagName == 'property':
                     xacro.grab_property(node, symbols)
+                # elif handle_macros(parent, node, tagName, macro_names):
+                #     pass
                 else:
                     try:
                         # create an object of type node.tagName
@@ -359,6 +384,9 @@ def parse_elem(node, parent, symbols, params):
                     except Exception as e:
                         print(e)
                         return
+            elif handle_macros(parent, node, tagName, macros):
+                pass
+
             else:
                 try:
                     # create an object of type node.tagName
@@ -374,7 +402,7 @@ def parse_elem(node, parent, symbols, params):
                     print(e)
                     return
 
-        parse_elem(node, elem, symbols, params)
+        parse_elem(node, elem, symbols, params, macros)
         node = next
 
 
@@ -388,7 +416,7 @@ def parse_macros(macros, symbols):
         m_params = {}
 
         body = Body()
-        parse_elem(m.body, body, symbols, m.params)
+        parse_elem(m.body, body, symbols, m.params, macros)
 
         if len(body.links) > 0:
             for link in body.links:
