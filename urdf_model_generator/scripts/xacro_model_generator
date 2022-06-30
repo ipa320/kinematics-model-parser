@@ -127,12 +127,12 @@ class Inertia(object):
 
     def dump_xtext(self, indent='', level=1):
         return '\n' + indent*level + 'inertia Inertia {' + \
-            ' ixx ' + str(float(self.ixx)) + \
-            ' ixy ' + str(float(self.ixy)) + \
-            ' ixz ' + str(float(self.ixz)) + \
-            ' iyy ' + str(float(self.iyy)) + \
-            ' iyz ' + str(float(self.iyz)) + \
-            ' izz ' + str(float(self.izz)) + ' }'
+            ' ixx ' + str(self.ixx) + \
+            ' ixy ' + str(self.ixy) + \
+            ' ixz ' + str(self.ixz) + \
+            ' iyy ' + str(self.iyy) + \
+            ' iyz ' + str(self.iyz) + \
+            ' izz ' + str(self.izz) + ' }'
 
 
 class Inertial(object):
@@ -144,7 +144,10 @@ class Inertial(object):
     def dump_xtext(self, indent='', level=1):
         xtext_str = '\n' + indent*level + 'inertial Inertial { '
         if self.origin:
-            xtext_str += self.origin.dump_xtext(indent, level+1)
+            if type(self.origin) == str:
+                xtext_str += '\n' + indent*(level+1) + 'origin "' + self.origin + '"'
+            else:
+                xtext_str += self.origin.dump_xtext(indent, level+1)
         if self.mass:
             xtext_str += self.mass.dump_xtext(indent, level+1)
         if self.inertia:
@@ -240,6 +243,11 @@ class Body(object):
     def __init__(self):
         self.links = list()
         self.joints = list()
+        self.property = xacro.Table()
+
+        # macro body can have any element
+        self.geometry = None
+        self.inertial = None
 
     def add_link(self, link):
         self.links.append(link)
@@ -259,8 +267,29 @@ class Body(object):
             for joint in self.joints:
                 xtext_str += joint.dump_xtext(indent, level+2)
             xtext_str = xtext_str[:-1] + ' }'
+        if self.geometry:
+            xtext_str += self.geometry.dump_xtext(indent, level+2)
+            xtext_str = xtext_str[:-1] + '}'
+        if self.inertial:
+            xtext_str += self.inertial.dump_xtext(indent, level+2)
+            xtext_str = xtext_str[:-1] + '}'
+
         xtext_str += ' }'
         return xtext_str
+
+
+class XacroStr(str):
+    def set_keyword(self, keyword=''):
+        self.keyword = keyword
+
+    def dump_xtext(self, indent='', level=1):
+        return '\n' + indent * level + self.keyword + ' "' + self + '"'
+
+
+def get_xacro_str(ref_name, keyword):
+    xacroStr = XacroStr(ref_name)
+    xacroStr.set_keyword(keyword)
+    return xacroStr
 
 
 def identify_param_type(elem, params):
@@ -290,31 +319,57 @@ def format_ref_link(link, params):
     return '"' + link + '"'
 
 
-def format_name(name):
-    if 'radians' in name:
-        return name
-    while '${' in name:
-        start = name.rfind('${')
-        if start != -1:
-            end = name[start:].rfind('}')
-            param = name[start+2:start+end]
-            name = name[:start] + '"' +  param + '"' + name[start+end+1:]
+def format_name(name, symbols=None):
+    try:
+        name = xacro.unicode(xacro.eval_text(name, symbols))
+        print('data: ' + data)
+    except Exception as e:
+        while '${' in name:
+            start = name.rfind('${')
+            if start != -1:
+                end = name[start:].rfind('}')
+                param = name[start+2:start+end]
+                name = name[:start] + '"' +  param + '"' + name[start+end+1:]
 
     return name
 
 
+def handle_macros(parent, node, name, macros):
+    if name in macros.keys():
+        node = macros[name].body.firstChild
+        while node.nodeType != xml.dom.Node.ELEMENT_NODE:
+            node = node.nextSibling
+
+        setattr(parent, node.tagName, get_xacro_str(name, node.tagName))
+        return True
+    return False
+
+
 # recursively traverses the xacro instance and
 # creates corresponding kinematics instances
-def parse_elem(node, parent):
+def parse_elem(node, parent, symbols, params, macros):
     node = node.firstChild
     elem = None
     while node:
         next = node.nextSibling
         if node.nodeType == xml.dom.Node.ELEMENT_NODE:
-            if hasattr(parent, node.tagName):
-                if isinstance(getattr(parent, node.tagName), str):
+            tagName = node.tagName.replace('xacro:', '')
+            if tagName == 'insert_block':
+                name, = xacro.check_attrs(node, ['name'], [])
+
+                # Assuming '*' is origin block. Better solution?
+                if ("*" + name) in params and hasattr(parent, 'origin'):
+                    setattr(parent, 'origin', get_xacro_str(name, 'origin'))
+
+            elif hasattr(parent, tagName):
+                # print(str(parent) + ' ' + tagName)
+                if isinstance(getattr(parent, tagName), str):
                     for name, value in node.attributes.items():
                         setattr(parent, node.tagName, format_name(value))
+                elif tagName == 'property':
+                    xacro.grab_property(node, symbols)
+                # elif handle_macros(parent, node, tagName, macro_names):
+                #     pass
                 else:
                     try:
                         # create an object of type node.tagName
@@ -324,11 +379,14 @@ def parse_elem(node, parent):
                         cls = globals()[node.tagName.capitalize()]
                         elem = cls()
                         for name, value in node.attributes.items():
-                            setattr(elem, name, format_name(value))
+                            setattr(elem, name, format_name(value, symbols))
                         setattr(parent, node.tagName, elem)
                     except Exception as e:
                         print(e)
                         return
+            elif handle_macros(parent, node, tagName, macros):
+                pass
+
             else:
                 try:
                     # create an object of type node.tagName
@@ -344,7 +402,7 @@ def parse_elem(node, parent):
                     print(e)
                     return
 
-        parse_elem(node, elem)
+        parse_elem(node, elem, symbols, params, macros)
         node = next
 
 
@@ -358,7 +416,7 @@ def parse_macros(macros, symbols):
         m_params = {}
 
         body = Body()
-        parse_elem(m.body, body)
+        parse_elem(m.body, body, symbols, m.params, macros)
 
         if len(body.links) > 0:
             for link in body.links:

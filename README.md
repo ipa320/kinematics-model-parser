@@ -15,9 +15,9 @@ source ~/kinematics_ws/devel/setup.bash
 ```
 
 ## Usage
-The executable is not a ROS node and has to be run as a regular C++ executable. It accepts 2 positional arguments:  
-`urdf-file`: path to `URDF` file to be parsed  
+The node accepts 2 positional arguments:  
+`xacro-file`: absolute path to `XACRO` file to be parsed  
 `model-file`: path to kinematics model file to be saved
 ```
-rosrun urdf_model_generator xacro_model_generator urdf-file model-file
+rosrun urdf_model_generator xacro_model_generator xacro-file model-file
 ```
