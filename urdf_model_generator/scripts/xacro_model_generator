@@ -26,6 +26,12 @@ class Robot(object):
         xtext_str = xtext_str[:-1] + ' } }'
         return xtext_str
 
+    def __str__(self):
+        str = self.name
+        for m in self.macros:
+            str += '\n\t' + m.name
+        return str
+
 
 class Macro(object):
     def __init__(self, name):
@@ -47,6 +53,9 @@ class Macro(object):
             xtext_str = xtext_str[:-1] + ' }'
         xtext_str += self.body.dump_xtext(indent, level+1) + ' },'
         return xtext_str
+
+    def __str__(self):
+        return self.name
 
 
 class Origin(object):
