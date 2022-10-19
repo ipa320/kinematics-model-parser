@@ -444,8 +444,6 @@ def parse_macros(macros, symbols):
         macro.params.update(m_params)
         robot.add_macro(macro)
 
-    print(robot.dump_xtext('  '))
-
     return robot
 
 
@@ -461,9 +459,7 @@ def process_file(input_file_name, **kwargs):
     # parse URDF elements -- joints, links, etc
     robot = parse_macros(macros, symbols)
 
-    name = input_file_name.split('/')[-1].split('.')[0]
-
-    return doc
+    return robot
 
 
 def process_doc(doc, mappings=None, **kwargs):
@@ -499,7 +495,9 @@ if __name__ == "__main__":
     opts, input_file_name = xacro.process_args(sys.argv[1:])
     try:
         # open and process file
-        doc = process_file(input_file_name, **vars(opts))
+        robot = process_file(input_file_name, **vars(opts))
+
+        out = xacro.open_output(opts.output)
         # print()
 
     # error handling
@@ -528,3 +526,10 @@ if __name__ == "__main__":
             raise  # create stack trace
         else:
             sys.exit(2)  # gracefully exit with error condition
+
+    # write output
+    out.write(robot.dump_xtext('  '))
+    print()
+    # only close output file, but not stdout
+    if opts.output:
+        out.close()
